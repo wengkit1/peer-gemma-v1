@@ -1,0 +1,67 @@
+# DeepSpeed ZeRO Stage 2 Configuration for PEER Gemma Training
+# Optimized for NSCC environment with multiple GPUs per node
+
+{
+  "fp16": {
+    "enabled": false
+  },
+  "bf16": {
+    "enabled": true
+  },
+  "zero_optimization": {
+    "stage": 2,
+    "offload_optimizer": {
+      "device": "none"
+    },
+    "offload_param": {
+      "device": "none"
+    },
+    "allgather_partitions": true,
+    "allgather_bucket_size": 5e8,
+    "overlap_comm": true,
+    "reduce_scatter": true,
+    "reduce_bucket_size": 5e8,
+    "contiguous_gradients": true,
+    "cpu_offload": false
+  },
+  "gradient_accumulation_steps": "auto",
+  "gradient_clipping": "auto",
+  "steps_per_print": 10,
+  "train_batch_size": "auto",
+  "train_micro_batch_size_per_gpu": "auto",
+  "wall_clock_breakdown": false,
+  "memory_breakdown": false,
+  "activation_checkpointing": {
+    "partition_activations": false,
+    "cpu_checkpointing": false,
+    "contiguous_memory_optimization": false,
+    "number_checkpoints": null,
+    "synchronize_checkpoint_boundary": false,
+    "profile": false
+  },
+  "flops_profiler": {
+    "enabled": false,
+    "profile_step": 1,
+    "module_depth": -1,
+    "top_modules": 1,
+    "detailed": true
+  },
+  "communication_data_type": "fp32",
+  "prescale_gradients": false,
+  "sparse_gradients": false,
+  "compression_training": {
+    "weight_quantization": {
+      "shared_parameters": {
+        "enabled": false,
+        "quantizer_kernel": false,
+        "schedule_offset": 1000,
+        "quantize_groups": 1,
+        "quantize_verbose": false,
+        "quantization_type": "symmetric",
+        "quantize_weight_in_forward": false,
+        "rounding": "nearest",
+        "quantize_change_ratio": 0.001,
+      }
+    }
+  }
+}

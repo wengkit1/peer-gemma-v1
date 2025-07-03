@@ -2,9 +2,9 @@ from configs.config_schema import SystemConfig
 
 nscc_system = SystemConfig(
     accelerator="gpu",
-    devices=8,  # NSCC setup
+    devices=8,
     num_nodes=1,
-    strategy="ddp",
+    strategy="deepspeed",
     precision="bf16-mixed",
     benchmark=True,
     deterministic=False

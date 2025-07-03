@@ -1,7 +1,7 @@
 from typing import List, Optional, Dict
 from dataclasses import dataclass, field
 from omegaconf import MISSING
-# PEER Surgery Configuration
+
 @dataclass
 class ModelConfig:
     """Configuration for PEER surgery on pre-trained models"""
@@ -51,13 +51,13 @@ class TrainingConfig:
 @dataclass
 class SystemConfig:
     """Configuration for System"""
-    accelerator="gpu",
-    devices=8,
-    num_nodes=1,
-    strategy="ddp",
-    precision="bf16-mixed",
-    benchmark=True,
-    deterministic=False
+    accelerator: str = "gpu",
+    devices: int = 8,
+    num_nodes: int = 1,
+    strategy: str = "ddp",
+    precision: str = "bf16-mixed",
+    benchmark: bool = True,
+    deterministic: bool = False
 
 
 @dataclass
