@@ -67,7 +67,6 @@ class Config:
     deepspeed_config: Optional[str] = "configs/deepspeed_z2.yaml"
 
     # Override arguments
-    num_devices: Optional[int] = None
     batch_size: Optional[int] = None
     learning_rate: Optional[float] = None
 
@@ -160,22 +159,19 @@ def create_dataset(data_config: DataConfig, tokenizer, split="train"):
 def setup_training_args(cfg: Config, output_dir: str, logging_dir: str):
     """Setup TrainingArguments with DeepSpeed integration"""
 
-    # Override devices from PBS or command line
-    num_devices = cfg.num_devices or cfg.system.devices
-
     # Get actual batch size (with overrides)
     batch_size = cfg.batch_size or cfg.data.batch_size
     learning_rate = cfg.learning_rate or cfg.training.learning_rate
 
     # Calculate gradient accumulation steps for effective batch size
     world_size = int(os.environ.get("WORLD_SIZE", 1))
-    per_device_batch_size = max(1, batch_size // (world_size * num_devices))
-    gradient_accumulation_steps = max(1, batch_size // (per_device_batch_size * world_size * num_devices))
+    per_device_batch_size = max(1, batch_size // (world_size * cfg.system.devices))
+    gradient_accumulation_steps = max(1, batch_size // (per_device_batch_size * world_size * cfg.system.devices))
 
     logger.info(f"Batch size calculation:")
     logger.info(f"  Target batch size: {batch_size}")
     logger.info(f"  World size: {world_size}")
-    logger.info(f"  Devices per node: {num_devices}")
+    logger.info(f"  Devices per node: {Config.system.devices}")
     logger.info(f"  Per device batch size: {per_device_batch_size}")
     logger.info(f"  Gradient accumulation steps: {gradient_accumulation_steps}")
 
