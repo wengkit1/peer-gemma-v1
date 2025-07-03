@@ -1,8 +1,8 @@
 from typing import Dict, List, Optional, Union
 import os
 import torch
-from torch.utils.data import Dataset, DataLoader, IterableDataset
-from datasets import load_dataset, IterableDataset as HFIterableDataset
+from torch.utils.data import DataLoader, IterableDataset
+from datasets import load_dataset
 from transformers import AutoTokenizer
 from loguru import logger
 import random
@@ -36,7 +36,11 @@ class TokenDataset(IterableDataset):
         self.vocab_size = vocab_size
         self.batch_size = batch_size
         self.num_samples = num_samples
-        self.cache_dir = cache_dir or os.getenv("HF_DATASETS_CACHE", "~/scratch/huggingface/datasets")
+
+        _scratch_dir = os.getenv("SCRATCH_DIR", os.path.expanduser("~/scratch"))
+        default_cache = f"{_scratch_dir}/.cache/huggingface/hub/datasets"
+        self.cache_dir = cache_dir or os.getenv("HF_DATASETS_CACHE", default_cache)
+
         self.dataset_name = dataset_name
         self.dataset_config = dataset_config
         self.streaming = streaming
