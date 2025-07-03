@@ -71,7 +71,6 @@ class Config:
     learning_rate: Optional[float] = None
 
     wandb_project: str = "peer-gemma-9b-nscc"
-    wandb_name: Optional[str] = None
     wandb_entity: str = "naqibl-nus"
 
     # Debug
@@ -218,7 +217,6 @@ def setup_training_args(cfg: Config, output_dir: str, logging_dir: str):
 
         # Reporting
         report_to=["wandb", "tensorboard"],
-        run_name=cfg.wandb_name,
 
         # Debug
         disable_tqdm=False,
@@ -236,7 +234,7 @@ def setup_wandb(cfg: Config):
             wandb.login(key=wandb_api_key)
 
             # Generate run name if not provided
-            run_name = cfg.wandb_name or f"peer-gemma-{cfg.model.model_name_or_path.split('/')[-1]}"
+            run_name = f"peer-gemma-{cfg.model.model_name_or_path.split('/')[-1]}"
 
             wandb.init(
                 project=cfg.wandb_project,
