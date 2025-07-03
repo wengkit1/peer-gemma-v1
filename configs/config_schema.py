@@ -30,7 +30,7 @@ class DataConfig:
     tokenizer: Optional[str] = None
 
     streaming: bool = False
-    cache_dir: Optional[str] = None # Optional for dev test
+    cache_dir: Optional[str] = None
 
     seed: int = 42
 
@@ -51,6 +51,14 @@ class TrainingConfig:
 @dataclass
 class SystemConfig:
     """Configuration for System"""
+    accelerator="gpu",
+    devices=8,
+    num_nodes=1,
+    strategy="ddp",
+    precision="bf16-mixed",
+    benchmark=True,
+    deterministic=False
+
 
 @dataclass
 class Config:
