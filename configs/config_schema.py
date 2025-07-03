@@ -1,5 +1,5 @@
 from typing import List, Optional, Dict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from omegaconf import MISSING
 # PEER Surgery Configuration
 @dataclass
@@ -17,6 +17,7 @@ class ModelConfig:
     low_cpu_mem_usage: bool = True
     device_map: Optional[str] = "auto"
 
+@dataclass
 class DataConfig:
     """Configuration for data loading"""
     sequence_length: int = 2048
@@ -24,16 +25,30 @@ class DataConfig:
     batch_size: int = 2
     num_samples: int = 100000
 
-    dataset_name: Dict[str, float] = {"c4", 1.0}
-    dataset_config: List[Optional[str]] = ["en"]
+    dataset_name: Optional[Dict[str, float]] = field(default_factory=dict)
+    dataset_config: Optional[List[str]] = field(default_factory=list)
     tokenizer: Optional[str] = None
 
     streaming: bool = False
     cache_dir: Optional[str] = None # Optional for dev test
 
+    seed: int = 42
+
+@dataclass
 class TrainingConfig:
     """Configuration for training"""
+    max_epochs: int = 3,
+    learning_rate: float = 1e-4,
+    weight_decay: float = 0.01,
+    warmup_steps: int = 1000,
+    gradient_clip_val: float = 1.0,
+    accumulate_grad_batches: int = 1,
+    val_check_interval: float = 0.25,
+    save_top_k: int = 3,
+    monitor="val_loss",
+    mode="min"
 
+@dataclass
 class SystemConfig:
     """Configuration for System"""
 
