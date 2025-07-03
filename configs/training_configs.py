@@ -10,7 +10,7 @@ full_training = TrainingConfig(
     val_check_interval=0.25,
     save_top_k=3,
     monitor="val_loss",
-    mode="min"
+    mode="min",
 )
 
 quick_training = TrainingConfig(

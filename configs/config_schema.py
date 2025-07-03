@@ -45,8 +45,8 @@ class TrainingConfig:
     accumulate_grad_batches: int = 1,
     val_check_interval: float = 0.25,
     save_top_k: int = 3,
-    monitor="val_loss",
-    mode="min"
+    monitor: str = "val_loss",
+    mode: str = "min",
 
 @dataclass
 class SystemConfig:
