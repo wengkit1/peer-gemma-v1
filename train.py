@@ -30,6 +30,20 @@ from data.data_module import TokenDataset
 load_dotenv()
 build_main_store()
 
+def setup_pytorch_backend(cfg: Config):
+    """Configure PyTorch backend settings safely based on available hardware"""
+
+    if torch.cuda.is_available():
+        if cfg.system.deterministic:
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+            logger.info("✅ CUDA deterministic mode enabled")
+        else:
+            torch.backends.cudnn.benchmark = cfg.system.benchmark
+            logger.info(f"✅ CUDA benchmark: {cfg.system.benchmark}")
+    else:
+        logger.info(" Skipping CUDA backend config (CUDA not available)")
+
 def setup_distributed():
     """Setup distributed training environment"""
     world_size = int(os.environ.get("WORLD_SIZE", 1))
@@ -45,10 +59,10 @@ def setup_distributed():
 
     return world_size, rank, local_rank
 
-def setup_model_and_tokenizer(model_config: ModelConfig):
+def setup_model_and_tokenizer(cfg: Config):
     """Setup PEER model and tokenizer"""
+    model_config = cfg.model
     logger.info(f"Loading model: {model_config.model_name_or_path}")
-
     # Get HF token from environment
     hf_token = os.getenv('HF_TOKEN')
     hf_home = os.getenv('HF_HOME')
@@ -85,10 +99,16 @@ def setup_model_and_tokenizer(model_config: ModelConfig):
         trust_remote_code=True
     )
 
-    # Ensure model is on correct device for distributed training
-    world_size, rank, local_rank = setup_distributed()
-    if world_size > 1:
-        model = model.to(f"cuda:{local_rank}")
+    device = cfg.system.accelerator
+
+    if device == "cuda":
+        world_size, rank, local_rank = setup_distributed()
+        if world_size > 1:
+            model = model.to(f"cuda:{local_rank}")
+        else:
+            model = model.to("cuda")
+    elif device == "cpu":
+        model = model.to("cpu")
 
     return model, tokenizer, config
 
@@ -119,7 +139,7 @@ def setup_training_args(cfg: Config, output_dir: str, logging_dir: str):
 
     # Calculate gradient accumulation steps for effective batch size
     world_size = int(os.environ.get("WORLD_SIZE", 1))
-    per_device_batch_size = max(1, batch_size // (world_size * cfg.system.devices))
+    per_device_batch_size = batch_size
     gradient_accumulation_steps = max(1, batch_size // (per_device_batch_size * world_size * cfg.system.devices))
 
     logger.info(f"Batch size calculation:")
@@ -163,7 +183,7 @@ def setup_training_args(cfg: Config, output_dir: str, logging_dir: str):
         greater_is_better=(cfg.training.mode == "max"),
 
         # Performance
-        dataloader_num_workers=4,
+        dataloader_num_workers=6,
         dataloader_pin_memory=True,
         remove_unused_columns=False,
 
@@ -215,15 +235,15 @@ def train_task(cfg: Config) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     logging_dir.mkdir(parents=True, exist_ok=True)
 
-    # Setup distributed training
+    setup_pytorch_backend(cfg)
+    # Setup distribute training
     world_size, rank, local_rank = setup_distributed()
 
     # Setup W&B on rank 0 only
     if rank == 0:
         setup_wandb(cfg)
 
-    # Load model and tokenizer
-    model, tokenizer, model_config = setup_model_and_tokenizer(cfg.model)
+    model, tokenizer, model_config = setup_model_and_tokenizer(cfg)
 
     # Create datasets
     train_dataset = create_dataset(cfg.data, tokenizer, split="train")

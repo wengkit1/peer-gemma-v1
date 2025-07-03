@@ -55,7 +55,6 @@ class SystemConfig:
     accelerator: str = "gpu"
     devices: int = 8
     num_nodes: int = 1
-    strategy: str = "ddp"
     precision: str = "bf16-mixed"
     benchmark: bool = True
     deterministic: bool = False
