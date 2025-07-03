@@ -51,11 +51,12 @@ def setup_model_and_tokenizer(model_config: ModelConfig):
 
     # Get HF token from environment
     hf_token = os.getenv('HF_TOKEN')
-
+    hf_home = os.getenv('HF_HOME')
     # Load tokenizer
     tokenizer = AutoTokenizer.from_pretrained(
         model_config.model_name_or_path,
         token=hf_token,
+        cache_dir=hf_home,
         trust_remote_code=True
     )
 
@@ -67,6 +68,7 @@ def setup_model_and_tokenizer(model_config: ModelConfig):
     config = AutoConfig.from_pretrained(
         model_config.model_name_or_path,
         token=hf_token,
+        cache_dir=hf_home,
         trust_remote_code=True
     )
 

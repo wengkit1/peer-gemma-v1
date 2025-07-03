@@ -39,7 +39,7 @@ class TokenDataset(IterableDataset):
 
         _scratch_dir = os.getenv("SCRATCH_DIR", os.path.expanduser("~/scratch"))
         default_cache = f"{_scratch_dir}/.cache/huggingface/hub/datasets"
-        self.cache_dir = cache_dir or os.getenv("HF_DATASETS_CACHE", default_cache)
+        self.datasets_cache_dir = cache_dir or os.getenv("HF_DATASETS_CACHE", default_cache)
 
         self.dataset_name = dataset_name
         self.dataset_config = dataset_config
@@ -50,12 +50,12 @@ class TokenDataset(IterableDataset):
         # Initialize tokenizer
         if tokenizer is None:
             tokenizer = "google/gemma-2-9b"  # Default from config
-
+        tokenizer_cache = os.getenv("HF_HOME")
         logger.info(f"Initializing tokenizer: {tokenizer}")
         self.tokenizer = AutoTokenizer.from_pretrained(
             tokenizer,
             token=os.getenv("HF_TOKEN"),
-            cache_dir=self.cache_dir,
+            cache_dir=tokenizer_cache,
             model_max_length=sequence_length
         )
 
@@ -87,7 +87,7 @@ class TokenDataset(IterableDataset):
                             config,
                             split=self.split,
                             streaming=self.streaming,
-                            cache_dir=self.cache_dir,
+                            cache_dir=self.datasets_cache_dir,
                             token=os.getenv("HF_TOKEN")
                         )
                         datasets[f"{dataset_name}_{config}"] = {
@@ -103,7 +103,7 @@ class TokenDataset(IterableDataset):
                             "en",
                             split=self.split,
                             streaming=self.streaming,
-                            cache_dir=self.cache_dir,
+                            cache_dir=self.datasets_cache_dir,
                             token=os.getenv("HF_TOKEN")
                         )
                         datasets[f"c4_en"] = {
@@ -117,7 +117,7 @@ class TokenDataset(IterableDataset):
                         dataset_name,
                         split=self.split,
                         streaming=self.streaming,
-                        cache_dir=self.cache_dir,
+                        cache_dir=self.datasets_cache_dir,
                         token=os.getenv("HF_TOKEN")
                     )
                     datasets[dataset_name] = {
