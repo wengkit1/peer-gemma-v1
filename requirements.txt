@@ -6,3 +6,4 @@ omegaconf>=2.3.0
 peer-pytorch>=0.2.1
 torch>=2.7.1
 transformers>=4.53.0
+wandb>=0.21.0
