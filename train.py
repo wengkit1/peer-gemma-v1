@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 PEER Gemma Training Script with Hydra Configuration Management
 Supports DeepSpeed, DDP, and NSCC PBS integration
@@ -6,7 +5,6 @@ Supports DeepSpeed, DDP, and NSCC PBS integration
 
 import os
 from pathlib import Path
-from typing import Optional
 import torch
 import torch.distributed as dist
 from transformers import (
@@ -19,63 +17,18 @@ from transformers import (
 from transformers.integrations import TensorBoardCallback
 import wandb
 from loguru import logger
-from hydra_zen import store, zen, MISSING
+from hydra_zen import store, zen
 from omegaconf import OmegaConf
 from dotenv import load_dotenv
 
-from configs.config_schema import ModelConfig, DataConfig, TrainingConfig, SystemConfig
-from configs.model_configs import gemma_7b_model, gemma_2b_model, gemma_9b_model
-from configs.data_configs import c4_data, c4_large_data
-from configs.training_configs import full_training, quick_training
-from configs.system_configs import nscc_system, local_system
+from configs.config_schema import ModelConfig, DataConfig, Config
+from configs import build_main_store
 from models.peer_gemma import PEERGemmaForCausalLM
 from data.data_module import TokenDataset
 
-
 # Load environment variables from .env file
 load_dotenv()
-
-# Configure Hydra store with your configs
-cs = store(group="model")
-cs(gemma_7b_model, name="gemma_7b")
-cs(gemma_2b_model, name="gemma_2b")
-cs(gemma_9b_model, name="gemma_9b")
-
-cs = store(group="data")
-cs(c4_data, name="c4")
-cs(c4_large_data, name="c4_large")
-
-cs = store(group="training")
-cs(full_training, name="full")
-cs(quick_training, name="quick")
-
-cs = store(group="system")
-cs(nscc_system, name="nscc")
-cs(local_system, name="local")
-
-# Main config schema
-@store(name="config")
-class Config:
-    model: ModelConfig = MISSING
-    data: DataConfig = MISSING
-    training: TrainingConfig = MISSING
-    system: SystemConfig = MISSING
-
-    # Training arguments
-    output_dir: str = "${oc.env:SCRATCH_DIR,/tmp}/peer_gemma_experiments/checkpoints"
-    logging_dir: str = "${oc.env:SCRATCH_DIR,/tmp}/peer_gemma_experiments/logs"
-    deepspeed_config: Optional[str] = "configs/deepspeed_z2.yaml"
-
-    # Override arguments
-    batch_size: Optional[int] = None
-    learning_rate: Optional[float] = None
-
-    wandb_project: str = "peer-gemma-9b-nscc"
-    wandb_entity: str = "naqibl-nus"
-
-    # Debug
-    debug: bool = False
-
+build_main_store()
 
 def setup_distributed():
     """Setup distributed training environment"""
@@ -159,8 +112,8 @@ def setup_training_args(cfg: Config, output_dir: str, logging_dir: str):
     """Setup TrainingArguments with DeepSpeed integration"""
 
     # Get actual batch size (with overrides)
-    batch_size = cfg.batch_size or cfg.data.batch_size
-    learning_rate = cfg.learning_rate or cfg.training.learning_rate
+    batch_size = cfg.data.batch_size
+    learning_rate = cfg.training.learning_rate
 
     # Calculate gradient accumulation steps for effective batch size
     world_size = int(os.environ.get("WORLD_SIZE", 1))
