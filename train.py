@@ -297,7 +297,7 @@ def train_task(cfg: Config) -> None:
 
     # Add custom callbacks if needed
     if not cfg.debug:
-        trainer.remove_callback(TensorBoardCallback)  # We'll use W&B
+        trainer.remove_callback(TensorBoardCallback)
 
     # Save config
     if rank == 0:
