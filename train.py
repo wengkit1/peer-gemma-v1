@@ -264,8 +264,15 @@ def setup_wandb(cfg: Config):
             logger.warning("WANDB_API_KEY not found, skipping W&B logging")
 
 
-def train_task(cfg: Config) -> None:
+def train_task(model, data, training, system, deepspeed_config, output_dir, logging_dir,
+               wandb_project, wandb_entity, debug=False):
     """Main training function"""
+    cfg = Config(
+        model=model, data=data, training=training, system=system,
+        deepspeed_config=deepspeed_config, output_dir=output_dir,
+        logging_dir=logging_dir, wandb_project=wandb_project,
+        wandb_entity=wandb_entity, debug=debug
+    )
 
     # Setup logging
     logger.info("Starting PEER Gemma training")
