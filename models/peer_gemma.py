@@ -107,10 +107,12 @@ class PEERGemmaForCausalLM(GemmaForCausalLM):
         """
         logger.info(f" Loading model from: {model_path}")
 
+        if 'torch_dtype' not in kwargs:
+            kwargs['torch_dtype'] = torch.bfloat16
+
         model = AutoModelForCausalLM.from_pretrained(
             model_path,
             token=os.getenv("HF_TOKEN"),
-            torch_dtype=torch.bfloat16,
             low_cpu_mem_usage=True,
             **kwargs
         )
