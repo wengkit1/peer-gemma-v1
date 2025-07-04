@@ -115,7 +115,6 @@ class PEERGemmaForCausalLM(GemmaForCausalLM):
 
         model = AutoModelForCausalLM.from_pretrained(
             model_path,
-            token=os.getenv("HF_TOKEN"),
             **kwargs
         )
 
