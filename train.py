@@ -252,12 +252,12 @@ def setup_wandb(cfg: Config):
 
             # Generate run name if not provided
             run_name = f"peer-gemma-{cfg.model.model_name_or_path.split('/')[-1]}"
-
+            config_dict = OmegaConf.to_container(OmegaConf.structured(cfg), resolve=True)
             wandb.init(
                 project=cfg.wandb_project,
                 entity=cfg.wandb_entity,
                 name=run_name,
-                config=OmegaConf.to_container(cfg, resolve=True),
+                config=config_dict,
                 tags=["peer", "gemma", "mixture-of-experts"]
             )
         else:
