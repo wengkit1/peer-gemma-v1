@@ -233,6 +233,7 @@ def setup_training_args(cfg: Config, output_dir: str, logging_dir: str):
         save_steps=500,
         save_total_limit=cfg.training.save_top_k,
         save_strategy="steps",
+        eval_strategy="steps",
         load_best_model_at_end=True,
         metric_for_best_model=cfg.training.monitor,
         greater_is_better=(cfg.training.mode == "max"),

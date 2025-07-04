@@ -22,6 +22,6 @@ quick_training = TrainingConfig(
     accumulate_grad_batches=1,
     val_check_interval=0.5,
     save_top_k=1,
-    monitor="val_loss",
+    monitor="eval_loss",
     mode="min"
 )
