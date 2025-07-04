@@ -109,13 +109,13 @@ class PEERGemmaForCausalLM(GemmaForCausalLM):
 
         if 'torch_dtype' not in kwargs:
             kwargs['torch_dtype'] = torch.bfloat16
+
         if 'low_cpu_mem_usage' not in kwargs:
             kwargs['low_cpu_mem_usage'] = True
 
         model = AutoModelForCausalLM.from_pretrained(
             model_path,
             token=os.getenv("HF_TOKEN"),
-            low_cpu_mem_usage=True,
             **kwargs
         )
 
