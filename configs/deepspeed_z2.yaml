@@ -1,5 +1,4 @@
 # DeepSpeed ZeRO Stage 2 Configuration for PEER Gemma Training
-# Optimized for NSCC environment with multiple GPUs per node
 
 {
   "fp16": {

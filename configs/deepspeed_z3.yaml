@@ -1,4 +1,4 @@
-# DeepSpeed ZeRO Stage 3 Configuration for PEER Gemma Training
+# DeepSpeed ZeRO Stage 3 Configuration
 # For larger models or memory-constrained environments
 
 {
