@@ -129,7 +129,7 @@ def setup_model_and_tokenizer(cfg: Config):
     )
 
     # Create PEER model
-    model = PEERGemmaForCausalLM.from_pretrained(
+    model = PEERGemmaForCausalLM.from_pretrained_with_peer_surgery(
         model_config.model_name_or_path,
         config=config,
         replace_layers=model_config.replace_layers,
