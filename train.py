@@ -325,7 +325,7 @@ def train_task(model, data, training, system, deepspeed_config, output_dir, logg
     if rank == 0:
         config_save_path = output_dir / "training_config.yaml"
         with open(config_save_path, 'w') as f:
-            OmegaConf.save(cfg, f)
+            OmegaConf.save(cfg, f, resolve=False)
         logger.info(f"Config saved to {config_save_path}")
 
     # Start training
