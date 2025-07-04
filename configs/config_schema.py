@@ -1,7 +1,6 @@
 from typing import List, Optional, Dict
 from dataclasses import dataclass, field
 from omegaconf import MISSING
-from hydra_zen import store, builds
 
 @dataclass
 class ModelConfig:
@@ -78,49 +77,3 @@ class Config:
 
     # Debug
     debug: bool = False
-
-from configs.model_configs import gemma_2b_model, gemma_7b_model, gemma_9b_model
-from configs.data_configs import c4_data, c4_large_data
-from configs.training_configs import full_training, quick_training
-from configs.system_configs import nscc_system, local_system
-
-def build_main_store():
-    cs = store(group="model")
-    cs(gemma_7b_model, name="gemma_7b")
-    cs(gemma_2b_model, name="gemma_2b")
-    cs(gemma_9b_model, name="gemma_9b")
-
-    cs = store(group="data")
-    cs(c4_data, name="c4")
-    cs(c4_large_data, name="c4_large")
-
-    cs = store(group="training")
-    cs(full_training, name="full")
-    cs(quick_training, name="quick")
-
-    cs = store(group="system")
-    cs(nscc_system, name="nscc")
-    cs(local_system, name="local")
-
-    main_config = builds(
-        Config,
-        model=MISSING,
-        data=MISSING,
-        training=MISSING,
-        system=MISSING,
-        deepspeed_config="configs/deepspeed_z2.yaml",
-        output_dir="${oc.env:SCRATCH_DIR,/tmp}/peer_gemma_experiments/checkpoints",
-        logging_dir="${oc.env:SCRATCH_DIR,/tmp}/peer_gemma_experiments/logs",
-        wandb_project="peer-gemma-9b-nscc",
-        wandb_entity="naqibl-nus",
-        hydra_defaults=[
-            "_self_",
-            {"model": "gemma_9b"},
-            {"data": "c4"},
-            {"training": "full"},
-            {"system": "nscc"}
-        ]
-    )
-
-    cs = store()
-    cs(main_config, name="config")
