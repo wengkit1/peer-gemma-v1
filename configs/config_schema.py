@@ -69,7 +69,7 @@ class Config:
     # Training arguments
     output_dir: str = "${oc.env:SCRATCH_DIR,/tmp}/peer_gemma_experiments/checkpoints"
     logging_dir: str = "${oc.env:SCRATCH_DIR,/tmp}/peer_gemma_experiments/logs"
-    deepspeed_config: Optional[str] = "configs/deepspeed_z2.yaml"
+    deepspeed_config: Optional[str] = "configs/deepspeed_z2.json"
 
     # Project names (did not put in config)
     wandb_project: str = "peer-gemma-9b-nscc"
