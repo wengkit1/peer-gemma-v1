@@ -9,7 +9,7 @@ full_training = TrainingConfig(
     accumulate_grad_batches=32,
     val_check_interval=0.25,
     save_top_k=3,
-    monitor="val_loss",
+    monitor="eval_loss",
     mode="min",
 )
 
