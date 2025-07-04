@@ -257,7 +257,7 @@ def setup_wandb(cfg: Config):
                 project=cfg.wandb_project,
                 entity=cfg.wandb_entity,
                 name=run_name,
-                config=OmegaConf.to_yaml(cfg, resolve=False),
+                config=OmegaConf.to_container(cfg, resolve=True),
                 tags=["peer", "gemma", "mixture-of-experts"]
             )
         else:
