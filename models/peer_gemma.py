@@ -94,6 +94,7 @@ class PEERGemmaForCausalLM(GemmaForCausalLM):
         logger.info(f"   Original total: {total_original_params:,} parameters")
         logger.info(f"   PEER total: {total_peer_params:,} parameters")
         logger.info(f"   Parameter ratio: {total_peer_params / total_original_params:.2f}x")
+        self.replaced_layer_indices = self.replace_layers
 
     @classmethod
     def from_pretrained_with_peer_surgery(cls,
