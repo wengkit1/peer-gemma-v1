@@ -47,10 +47,12 @@ class PEERGemmaForCausalLM(GemmaForCausalLM):
         logger.info(f"   Dim: {final_peer_config['dim']}")
 
         peer_layer = PEER(**final_peer_config)
+        # Convert to bfloat16 to match base model
+        peer_layer = peer_layer.to(dtype=torch.bfloat16)
 
         # Count parameters in this layer
         peer_params = sum(p.numel() for p in peer_layer.parameters())
-        memory_gb = peer_params * 4 / (1024 ** 3)  # 4 bytes per float32
+        memory_gb = peer_params * 2 / (1024 ** 3)
 
         logger.info(f"✨ PEER layer {layer_idx} created: {peer_params:,} parameters ({memory_gb:.2f} GB)")
 
