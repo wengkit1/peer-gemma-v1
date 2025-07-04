@@ -49,15 +49,19 @@ class TokenDataset(IterableDataset):
 
         # Initialize tokenizer
         if tokenizer is None:
-            tokenizer = "google/gemma-2-9b"  # Default from config
-        tokenizer_cache = os.getenv("HF_HOME")
-        logger.info(f"Initializing tokenizer: {tokenizer}")
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            tokenizer,
-            token=os.getenv("HF_TOKEN"),
-            cache_dir=tokenizer_cache,
-            model_max_length=sequence_length
-        )
+            # Only create new tokenizer if none provided
+            tokenizer_name = getattr(dataset_config, 'tokenizer', None) or "google/gemma-2-9b"
+            logger.info(f"Initializing tokenizer: {tokenizer_name}")
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                tokenizer_name,
+                token=os.getenv("HF_TOKEN"),
+                cache_dir=os.getenv("HF_HOME"),
+                trust_remote_code=True
+            )
+        else:
+            # Use the passed tokenizer object
+            self.tokenizer = tokenizer
+            logger.info("Using provided tokenizer")
 
         # Add padding token if missing (common for Gemma)
         if self.tokenizer.pad_token is None:
