@@ -17,7 +17,7 @@ class TokenDataset(IterableDataset):
                  num_samples: int = 100000,
                  dataset_name: Optional[Union[str, Dict[str, float]]] = None,
                  dataset_config: Optional[List[str]] = None,
-                 tokenizer: Optional[str] = None,
+                 tokenizer = None,
                  cache_dir: Optional[str] = None,
                  streaming: bool = False,
                  split: str = "train",
@@ -50,7 +50,7 @@ class TokenDataset(IterableDataset):
         # Initialize tokenizer
         if tokenizer is None:
             # Only create new tokenizer if none provided
-            tokenizer_name = getattr(dataset_config, 'tokenizer', None) or "google/gemma-2-9b"
+            tokenizer_name = "google/gemma-2-9b"
             logger.info(f"Initializing tokenizer: {tokenizer_name}")
             self.tokenizer = AutoTokenizer.from_pretrained(
                 tokenizer_name,
@@ -63,7 +63,6 @@ class TokenDataset(IterableDataset):
             self.tokenizer = tokenizer
             logger.info("Using provided tokenizer")
 
-        # Add padding token if missing (common for Gemma)
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
