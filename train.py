@@ -152,6 +152,19 @@ def setup_model_and_tokenizer(cfg: Config):
     elif device == "cpu":
         model = model.to("cpu")
 
+    logger.info(f"Model setup complete. Model device: {next(model.parameters()).device}")
+    logger.info(f"Model dtype: {next(model.parameters()).dtype}")
+
+    # Test forward pass
+    try:
+        dummy_input = torch.randint(0, 1000, (1, 10)).to(next(model.parameters()).device)
+        with torch.no_grad():
+            output = model(dummy_input)
+        logger.info("✅ Forward pass test successful")
+    except Exception as e:
+        logger.error(f"❌ Forward pass test failed: {e}")
+        raise
+
     return model, tokenizer, config
 
 
