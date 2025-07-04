@@ -21,7 +21,7 @@ from hydra_zen import builds, store, zen
 from omegaconf import OmegaConf, MISSING
 from dotenv import load_dotenv
 
-from configs.config_schema import ModelConfig, DataConfig, Config
+from configs.config_schema import DataConfig, Config
 from models.peer_gemma import PEERGemmaForCausalLM
 from data.data_module import TokenDataset
 
@@ -187,7 +187,7 @@ def setup_training_args(cfg: Config, output_dir: str, logging_dir: str):
     logger.info(f"Batch size calculation:")
     logger.info(f"  Target batch size: {batch_size}")
     logger.info(f"  World size: {world_size}")
-    logger.info(f"  Devices per node: {Config.system.devices}")
+    logger.info(f"  Devices per node: {cfg.system.devices}")
     logger.info(f"  Per device batch size: {per_device_batch_size}")
     logger.info(f"  Gradient accumulation steps: {gradient_accumulation_steps}")
 
