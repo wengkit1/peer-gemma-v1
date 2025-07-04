@@ -257,7 +257,7 @@ def setup_wandb(cfg: Config):
                 project=cfg.wandb_project,
                 entity=cfg.wandb_entity,
                 name=run_name,
-                config=OmegaConf.to_container(cfg, resolve=True),
+                config=OmegaConf.to_yaml(cfg, resolve=False),
                 tags=["peer", "gemma", "mixture-of-experts"]
             )
         else:
@@ -325,7 +325,7 @@ def train_task(model, data, training, system, deepspeed_config, output_dir, logg
     if rank == 0:
         config_save_path = output_dir / "training_config.yaml"
         with open(config_save_path, 'w') as f:
-            OmegaConf.save(cfg, f, resolve=False)
+            f.write(OmegaConf.to_yaml(cfg, resolve=False))
         logger.info(f"Config saved to {config_save_path}")
 
     # Start training
