@@ -1,5 +1,3 @@
-# DeepSpeed ZeRO Stage 2 Configuration for PEER Gemma Training
-
 {
   "fp16": {
     "enabled": false
