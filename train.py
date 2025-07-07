@@ -331,7 +331,6 @@ def train_task(model, data, training, system, deepspeed_config, output_dir, logg
         tokenizer=tokenizer,
     )
 
-    # Add custom callbacks if needed
     if not cfg.debug:
         trainer.remove_callback(TensorBoardCallback)
 
