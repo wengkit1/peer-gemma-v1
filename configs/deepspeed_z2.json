@@ -44,20 +44,6 @@
   },
   "communication_data_type": "fp32",
   "prescale_gradients": false,
-  "sparse_gradients": false,
-  "compression_training": {
-    "weight_quantization": {
-      "shared_parameters": {
-        "enabled": false,
-        "quantizer_kernel": false,
-        "schedule_offset": 1000,
-        "quantize_groups": 1,
-        "quantize_verbose": false,
-        "quantization_type": "symmetric",
-        "quantize_weight_in_forward": false,
-        "rounding": "nearest",
-        "quantize_change_ratio": 0.001
-      }
-    }
-  }
+  "sparse_gradients": false
+
 }
