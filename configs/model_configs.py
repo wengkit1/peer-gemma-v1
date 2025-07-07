@@ -4,7 +4,7 @@ gemma_2b_model = ModelConfig(
     model_name_or_path="google/gemma-2-2b",
     replace_layers=[3, 6],
     peer_config={
-        "num_experts": 32768,
+        "num_experts": 62500,
         "num_experts_per_head": 8,
         "heads": 8,
         "dim_key": 64
