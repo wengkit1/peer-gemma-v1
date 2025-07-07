@@ -57,7 +57,7 @@
         "quantization_type": "symmetric",
         "quantize_weight_in_forward": false,
         "rounding": "nearest",
-        "quantize_change_ratio": 0.001,
+        "quantize_change_ratio": 0.001
       }
     }
   }
