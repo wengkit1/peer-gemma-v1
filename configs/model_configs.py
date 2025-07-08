@@ -44,7 +44,7 @@ gemma_7b_model = ModelConfig(
 
 gemma_9b_model = ModelConfig(
     model_name_or_path="google/gemma-2-9b",
-    replace_layers=[6, 9],  # As in your original config
+    replace_layers=[21],
     peer_config={
         "num_experts": 65536,
         "num_experts_per_head": 16,

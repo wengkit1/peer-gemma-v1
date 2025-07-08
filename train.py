@@ -25,7 +25,6 @@ from configs.config_schema import DataConfig, Config
 from models.peer_gemma import PEERGemmaForCausalLM
 from data.data_module import TokenDataset
 
-# Load environment variables from .env file
 load_dotenv()
 from configs.model_configs import gemma_2b_model, gemma_7b_model, gemma_9b_model, peered_model
 from configs.data_configs import c4_data, c4_large_data
@@ -231,7 +230,7 @@ def setup_training_args(cfg: Config, output_dir: str, logging_dir: str):
         # Logging
         logging_steps=10,
         logging_first_step=True,
-        eval_steps=500,
+        eval_steps=50,
         save_steps=500,
         save_total_limit=cfg.training.save_top_k,
         save_strategy="steps",
@@ -266,7 +265,7 @@ def setup_wandb(cfg: Config):
         if wandb_api_key:
             wandb.login(key=wandb_api_key)
 
-            run_name = f"from-peer-pretrained-{cfg.model.model_name_or_path.split('/')[-1]}"
+            run_name = f"{cfg.model.model_name_or_path.split('/')[-1]}"
             config_dict = OmegaConf.to_container(OmegaConf.structured(cfg), resolve=True)
             wandb.init(
                 project=cfg.wandb_project,
