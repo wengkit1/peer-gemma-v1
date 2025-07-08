@@ -14,6 +14,20 @@ gemma_2b_model = ModelConfig(
     device_map="auto"
 )
 
+peered_model = ModelConfig(
+    model_name_or_path="/home/e0686150/scratch/peer_gemma_experiments/checkpoints/final_model",
+    replace_layers=[35, 41],
+    peer_config={
+        "num_experts": 62500,
+        "num_experts_per_head": 8,
+        "heads": 8,
+        "dim_key": 64
+    },
+    torch_dtype="bfloat16",
+    low_cpu_mem_usage=True,
+    device_map="auto"
+)
+
 gemma_7b_model = ModelConfig(
     model_name_or_path="google/gemma-2-7b",
     replace_layers=[6, 9, 12],  # More layers for bigger model

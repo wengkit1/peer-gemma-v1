@@ -27,7 +27,7 @@ from data.data_module import TokenDataset
 
 # Load environment variables from .env file
 load_dotenv()
-from configs.model_configs import gemma_2b_model, gemma_7b_model, gemma_9b_model
+from configs.model_configs import gemma_2b_model, gemma_7b_model, gemma_9b_model, peered_model
 from configs.data_configs import c4_data, c4_large_data
 from configs.training_configs import full_training, quick_training
 from configs.system_configs import nscc_system, local_system
@@ -36,6 +36,7 @@ cs = store(group="model")
 cs(gemma_7b_model, name="gemma_7b")
 cs(gemma_2b_model, name="gemma_2b")
 cs(gemma_9b_model, name="gemma_9b")
+cs(peered_model, name="peered_model")
 
 cs = store(group="data")
 cs(c4_data, name="c4")
@@ -211,7 +212,7 @@ def setup_training_args(cfg: Config, output_dir: str, logging_dir: str):
 
         # Training params
         # num_train_epochs=cfg.training.max_epochs,
-        max_steps=1200,
+        max_steps=5000,
         per_device_train_batch_size=per_device_batch_size,
         per_device_eval_batch_size=per_device_batch_size,
         gradient_accumulation_steps=gradient_accumulation_steps,
@@ -266,7 +267,7 @@ def setup_wandb(cfg: Config):
             wandb.login(key=wandb_api_key)
 
             # Generate run name if not provided
-            run_name = f"peer-gemma-{cfg.model.model_name_or_path.split('/')[-1]}"
+            run_name = f"from-peer-pretrained-{cfg.model.model_name_or_path.split('/')[-1]}"
             config_dict = OmegaConf.to_container(OmegaConf.structured(cfg), resolve=True)
             wandb.init(
                 project=cfg.wandb_project,
