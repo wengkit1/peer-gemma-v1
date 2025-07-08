@@ -231,7 +231,7 @@ def setup_training_args(cfg: Config, output_dir: str, logging_dir: str):
         # Logging
         logging_steps=10,
         logging_first_step=True,
-        eval_steps=100,
+        eval_steps=500,
         save_steps=500,
         run_name=run_name,
         save_total_limit=cfg.training.save_top_k,
@@ -335,7 +335,9 @@ def train_task(model, data, training, system, deepspeed_config, output_dir, logg
 
     # Create datasets
     train_dataset = create_dataset(cfg.data, tokenizer, split="train")
-    eval_dataset = create_dataset(cfg.data, tokenizer, split="validation")
+    eval_data_config = cfg.data
+    eval_data_config.num_samples = 1000
+    eval_dataset = create_dataset(eval_data_config, tokenizer, split="validation")
 
     # Data collator
     data_collator = DataCollatorForLanguageModeling(

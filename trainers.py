@@ -26,7 +26,7 @@ class GradualUnfreezingCallback(TrainerCallback):
                 param.requires_grad = False
                 logger.info(f"❄️ Frozen: {name}")
 
-        logger.info(f"Total PEER parameters: {len(peer_param_ids)}")
+        logger.info(f"Total PEER components: {len(peer_param_ids)}")
 
     def on_step_end(self, args, state, control, **kwargs):
         current_step = state.global_step
