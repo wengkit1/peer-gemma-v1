@@ -172,7 +172,6 @@ def create_dataset(data_config: DataConfig, tokenizer, split="train"):
     """Create dataset for training/validation"""
     return TokenDataset(
         sequence_length=data_config.sequence_length,
-        vocab_size=data_config.vocab_size,
         batch_size=data_config.batch_size,
         num_samples=data_config.num_samples,
         dataset_name=data_config.dataset_name,
@@ -211,7 +210,7 @@ def setup_training_args(cfg: Config, output_dir: str, logging_dir: str):
 
         # Training params
         # num_train_epochs=cfg.training.max_epochs,
-        max_steps=5000,
+        max_steps=25000,
         per_device_train_batch_size=per_device_batch_size,
         per_device_eval_batch_size=per_device_batch_size,
         gradient_accumulation_steps=gradient_accumulation_steps,

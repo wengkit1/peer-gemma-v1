@@ -21,7 +21,6 @@ class ModelConfig:
 class DataConfig:
     """Configuration for data loading"""
     sequence_length: int = 2048
-    vocab_size: int = 256000
     batch_size: int = 2
     num_samples: int = 100000
 

@@ -2,7 +2,6 @@ from configs.config_schema import DataConfig
 
 c4_data = DataConfig(
     sequence_length=2048,
-    vocab_size=256000,
     batch_size=2,
     num_samples=100000,
     dataset_name={"allenai/c4": 1.0},
@@ -15,7 +14,6 @@ c4_data = DataConfig(
 
 c4_large_data = DataConfig(
     sequence_length=4096,
-    vocab_size=256000,
     batch_size=1,
     num_samples=1000000,
     dataset_name={"allenai/c4": 1.0},

@@ -12,7 +12,6 @@ import numpy as np
 class TokenDataset(IterableDataset):
     def __init__(self,
                  sequence_length: int = 2048,
-                 vocab_size: int = 256000,
                  batch_size: int = 2,
                  num_samples: int = 100000,
                  dataset_name: Optional[Union[str, Dict[str, float]]] = None,
@@ -33,7 +32,6 @@ class TokenDataset(IterableDataset):
             dataset_config = ["en"]
 
         self.sequence_length = sequence_length
-        self.vocab_size = vocab_size
         self.batch_size = batch_size
         self.num_samples = num_samples
 
@@ -67,7 +65,6 @@ class TokenDataset(IterableDataset):
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
         logger.info(f"Tokenizer vocab size: {self.tokenizer.vocab_size}")
-        logger.info(f"Configured vocab size: {vocab_size}")
 
         # Load datasets
         self.datasets = self._load_datasets()
@@ -217,7 +214,6 @@ class DataModule:
 
     def __init__(self,
                  sequence_length: int = 2048,
-                 vocab_size: int = 256000,
                  batch_size: int = 2,
                  num_samples: int = 100000,
                  dataset_name: Optional[Union[str, Dict[str, float]]] = None,
@@ -230,7 +226,6 @@ class DataModule:
                  drop_last: bool = True,
                  seed: int = 42):
         self.sequence_length = sequence_length
-        self.vocab_size = vocab_size
         self.batch_size = batch_size
         self.num_samples = num_samples
         self.dataset_name = dataset_name
@@ -255,7 +250,6 @@ class DataModule:
         if stage == "fit" or stage is None:
             self.train_dataset = TokenDataset(
                 sequence_length=self.sequence_length,
-                vocab_size=self.vocab_size,
                 batch_size=self.batch_size,
                 num_samples=self.num_samples,
                 dataset_name=self.dataset_name,
@@ -270,7 +264,6 @@ class DataModule:
             # Create smaller validation dataset
             self.val_dataset = TokenDataset(
                 sequence_length=self.sequence_length,
-                vocab_size=self.vocab_size,
                 batch_size=self.batch_size,
                 num_samples=min(1000, self.num_samples // 10),  # 10% or 1000 samples max
                 dataset_name=self.dataset_name,
@@ -322,7 +315,6 @@ class DataModule:
         """Create DataModule from configuration object"""
         return cls(
             sequence_length=data_config.sequence_length,
-            vocab_size=data_config.vocab_size,
             batch_size=data_config.batch_size,
             num_samples=data_config.num_samples,
             dataset_name=data_config.dataset_name,
