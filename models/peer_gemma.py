@@ -3,7 +3,6 @@ from transformers import GemmaForCausalLM, AutoModelForCausalLM
 from PEER_pytorch import PEER
 from loguru import logger
 from typing import List, Dict, Any
-import os
 
 
 class PEERGemmaForCausalLM(GemmaForCausalLM):

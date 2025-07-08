@@ -24,6 +24,7 @@ from dotenv import load_dotenv
 from configs.config_schema import DataConfig, Config
 from models.peer_gemma import PEERGemmaForCausalLM
 from data.data_module import TokenDataset
+from trainers import GradualUnfreezingCallback
 
 load_dotenv()
 from configs.model_configs import gemma_2b_model, gemma_7b_model, gemma_9b_model, peered_model
@@ -203,6 +204,7 @@ def setup_training_args(cfg: Config, output_dir: str, logging_dir: str):
     logger.info(f"  Per device batch size: {per_device_batch_size}")
     logger.info(f"  Gradient accumulation steps: {gradient_accumulation_steps}")
 
+    run_name = f"{cfg.model.model_name_or_path.split('/')[-1]}"
     # Setup training arguments
     training_args = TrainingArguments(
         output_dir=output_dir,
@@ -229,8 +231,9 @@ def setup_training_args(cfg: Config, output_dir: str, logging_dir: str):
         # Logging
         logging_steps=10,
         logging_first_step=True,
-        eval_steps=50,
+        eval_steps=100,
         save_steps=500,
+        run_name=run_name,
         save_total_limit=cfg.training.save_top_k,
         save_strategy="steps",
         eval_strategy="steps",
@@ -264,18 +267,41 @@ def setup_wandb(cfg: Config):
         if wandb_api_key:
             wandb.login(key=wandb_api_key)
 
-            run_name = f"{cfg.model.model_name_or_path.split('/')[-1]}"
             config_dict = OmegaConf.to_container(OmegaConf.structured(cfg), resolve=True)
             wandb.init(
                 project=cfg.wandb_project,
                 entity=cfg.wandb_entity,
-                name=run_name,
                 config=config_dict,
                 tags=["peer", "gemma", "mixture-of-experts"]
             )
         else:
             logger.warning("WANDB_API_KEY not found, skipping W&B logging")
 
+
+def create_unfreezing_callback(model):
+    """Create unfreezing callback using model's PEER info"""
+
+    peer_info = model.get_peer_info()
+    peer_layer_indices = peer_info["replaced_layer_indices"]
+    total_layers = len(model.model.layers)
+
+    logger.info(f"Creating unfreezing callback for PEER layers: {peer_layer_indices}")
+
+    # Create middle-out unfreezing schedule
+    unfreezing_schedule = {}
+
+    for i, step in enumerate(range(500, 5000, 500)):
+        layers_to_unfreeze = []
+        for peer_idx in peer_layer_indices:
+            if peer_idx - i - 1 >= 0:
+                layers_to_unfreeze.append(f'layers.{peer_idx - i - 1}')
+            if peer_idx + i + 1 < total_layers:
+                layers_to_unfreeze.append(f'layers.{peer_idx + i + 1}')
+
+        if layers_to_unfreeze:
+            unfreezing_schedule[step] = layers_to_unfreeze
+
+    return GradualUnfreezingCallback(model, unfreezing_schedule)
 
 def train_task(model, data, training, system, deepspeed_config, output_dir, logging_dir,
                wandb_project, wandb_entity, debug=False):
@@ -320,6 +346,8 @@ def train_task(model, data, training, system, deepspeed_config, output_dir, logg
     # Setup training arguments
     training_args = setup_training_args(cfg, str(output_dir), str(logging_dir))
 
+    # unfreezing schedule
+    callback = create_unfreezing_callback(model)
     # Create trainer
     trainer = Trainer(
         model=model,
@@ -330,6 +358,7 @@ def train_task(model, data, training, system, deepspeed_config, output_dir, logg
         tokenizer=tokenizer,
     )
 
+    trainer.add_callback(callback)
     if not cfg.debug:
         trainer.remove_callback(TensorBoardCallback)
 
