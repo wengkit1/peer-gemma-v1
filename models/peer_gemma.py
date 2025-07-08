@@ -100,7 +100,7 @@ class PEERGemmaForCausalLM(GemmaForCausalLM):
     @classmethod
     def from_pretrained_with_peer_surgery(cls,
                                           model_path: str,
-                                          replace_layers="middle",
+                                          replace_layers: list,
                                           peer_config=None,
                                           **kwargs):
         """
@@ -150,7 +150,7 @@ class PEERGemmaForCausalLM(GemmaForCausalLM):
                 "parameters": peer_params,
                 "num_experts": peer_layer.num_experts,
                 "heads": peer_layer.heads,
-                "experts_per_head": peer_layer.num_experts_per_head
+                "experts_per_head": peer_layer.num_experts_per_head_topk
             }
 
         total_model_params = sum(p.numel() for p in self.parameters())
