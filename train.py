@@ -266,7 +266,6 @@ def setup_wandb(cfg: Config):
         if wandb_api_key:
             wandb.login(key=wandb_api_key)
 
-            # Generate run name if not provided
             run_name = f"from-peer-pretrained-{cfg.model.model_name_or_path.split('/')[-1]}"
             config_dict = OmegaConf.to_container(OmegaConf.structured(cfg), resolve=True)
             wandb.init(

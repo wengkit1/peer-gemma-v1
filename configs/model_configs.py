@@ -15,7 +15,7 @@ gemma_2b_model = ModelConfig(
 )
 
 peered_model = ModelConfig(
-    model_name_or_path="/home/e0686150/scratch/peer_gemma_experiments/checkpoints/final_model",
+    model_name_or_path="/home/users/nus/e0686150/scratch/peer_gemma_experiments/checkpoints/final_model",
     replace_layers=[35, 41],
     peer_config={
         "num_experts": 62500,
