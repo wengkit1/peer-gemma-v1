@@ -342,8 +342,8 @@ def train_task(model, data, training, system, deepspeed_config, output_dir, logg
 
     effective_gbs = int(os.environ.get('EFFECTIVE_GBS',
                                      cfg.data.batch_size * cfg.system.devices * cfg.training.accumulate_grad_batches))
-    eval_data_config.num_samples = effective_gbs * cfg.training.max_steps // 2
-    eval_dataset = create_dataset(eval_data_config, tokenizer, split="validation")
+    eval_data_config.num_samples = effective_gbs * 20
+    eval_dataset = create_dataset(eval_data_config, tokenizer)
 
     # Data collator
     data_collator = DataCollatorForLanguageModeling(
