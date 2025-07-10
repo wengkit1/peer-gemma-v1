@@ -24,6 +24,16 @@ c4_large_data = DataConfig(
     seed=42
 )
 
-
+fineweb_large_data = DataConfig(
+    sequence_length=8192,
+    batch_size=1,
+    num_samples=10000000,
+    dataset_name={"HuggingFaceFW/fineweb": 1.0},
+    dataset_config=["sample-10BT"],
+    tokenizer="google/gemma-2-2b",
+    streaming=True,
+    cache_dir=None,
+    seed=42
+)
 
 

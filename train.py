@@ -28,7 +28,7 @@ from trainers import GradualUnfreezingCallback
 
 load_dotenv()
 from configs.model_configs import gemma_2b_model, gemma_7b_model, gemma_9b_model, peered_model
-from configs.data_configs import c4_data, c4_large_data
+from configs.data_configs import c4_data, c4_large_data, fineweb_large_data
 from configs.training_configs import full_training, quick_training
 from configs.system_configs import nscc_system, local_system
 
@@ -41,6 +41,7 @@ cs(peered_model, name="peered_model")
 cs = store(group="data")
 cs(c4_data, name="c4")
 cs(c4_large_data, name="c4_large")
+cs(fineweb_large_data, name="fineweb_large")
 
 cs = store(group="training")
 cs(full_training, name="full")
@@ -188,31 +189,30 @@ def create_dataset(data_config: DataConfig, tokenizer, split="train"):
 def setup_training_args(cfg: Config, output_dir: str, logging_dir: str):
     """Setup TrainingArguments with DeepSpeed integration"""
 
-    # Get actual batch size (with overrides)
-    batch_size = cfg.data.batch_size
+    per_device_batch_size = cfg.data.batch_size
     learning_rate = cfg.training.learning_rate
-
+    max_steps = cfg.training.max_steps
     # Calculate gradient accumulation steps for effective batch size
     world_size = int(os.environ.get("WORLD_SIZE", 1))
-    per_device_batch_size = batch_size
-    gradient_accumulation_steps = max(1, batch_size // (per_device_batch_size * world_size * cfg.system.devices))
+    gradient_accumulation_steps = cfg.training.accumulate_grad_batches
+
+    effective_gbs = int(os.environ.get('EFFECTIVE_GBS', 256))
 
     logger.info(f"Batch size calculation:")
-    logger.info(f"  Target batch size: {batch_size}")
     logger.info(f"  World size: {world_size}")
     logger.info(f"  Devices per node: {cfg.system.devices}")
     logger.info(f"  Per device batch size: {per_device_batch_size}")
     logger.info(f"  Gradient accumulation steps: {gradient_accumulation_steps}")
 
-    run_name = f"{cfg.model.model_name_or_path.split('/')[-1]}"
+    run_name = os.environ.get("RUN_NAME", f"gemma9b_lr{learning_rate}_gbs{effective_gbs}")
+
     # Setup training arguments
     training_args = TrainingArguments(
         output_dir=output_dir,
         logging_dir=logging_dir,
 
         # Training params
-        # num_train_epochs=cfg.training.max_epochs,
-        max_steps=25000,
+        max_steps=max_steps,
         per_device_train_batch_size=per_device_batch_size,
         per_device_eval_batch_size=per_device_batch_size,
         gradient_accumulation_steps=gradient_accumulation_steps,
@@ -266,9 +266,10 @@ def setup_wandb(cfg: Config):
         wandb_api_key = os.getenv('WANDB_API_KEY')
         if wandb_api_key:
             wandb.login(key=wandb_api_key)
-
+            run_name = os.environ.get("RUN_NAME", f"{cfg.model.model_name_or_path.split('/')[-1]}")
             config_dict = OmegaConf.to_container(OmegaConf.structured(cfg), resolve=True)
             wandb.init(
+                name=run_name,
                 project=cfg.wandb_project,
                 entity=cfg.wandb_entity,
                 config=config_dict,
@@ -333,23 +334,26 @@ def train_task(model, data, training, system, deepspeed_config, output_dir, logg
 
     model, tokenizer, model_config = setup_model_and_tokenizer(cfg)
 
+    training_args = setup_training_args(cfg, str(output_dir), str(logging_dir))
+
     # Create datasets
     train_dataset = create_dataset(cfg.data, tokenizer, split="train")
     eval_data_config = cfg.data
-    eval_data_config.num_samples = 1000
+
+    effective_gbs = int(os.environ.get('EFFECTIVE_GBS',
+                                     cfg.data.batch_size * cfg.system.devices * cfg.training.accumulate_grad_batches))
+    eval_data_config.num_samples = effective_gbs * cfg.training.max_steps // 2
     eval_dataset = create_dataset(eval_data_config, tokenizer, split="validation")
 
     # Data collator
     data_collator = DataCollatorForLanguageModeling(
         tokenizer=tokenizer,
-        mlm=False  # Causal LM
+        mlm=False,
     )
 
-    # Setup training arguments
-    training_args = setup_training_args(cfg, str(output_dir), str(logging_dir))
 
     # unfreezing schedule
-    callback = create_unfreezing_callback(model)
+    # callback = create_unfreezing_callback(model)
     # Create trainer
     trainer = Trainer(
         model=model,
@@ -360,7 +364,7 @@ def train_task(model, data, training, system, deepspeed_config, output_dir, logg
         processing_class=tokenizer,
     )
 
-    trainer.add_callback(callback)
+    # trainer.add_callback(callback)
     if not cfg.debug:
         trainer.remove_callback(TensorBoardCallback)
 

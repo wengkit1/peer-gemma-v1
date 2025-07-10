@@ -36,7 +36,7 @@ class DataConfig:
 @dataclass
 class TrainingConfig:
     """Configuration for training"""
-    max_epochs: int = 3
+    max_steps: int = 30000
     learning_rate: float = 1e-4
     weight_decay: float = 0.01
     warmup_steps: int = 1000

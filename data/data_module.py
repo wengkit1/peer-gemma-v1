@@ -14,22 +14,13 @@ class TokenDataset(IterableDataset):
                  sequence_length: int = 2048,
                  batch_size: int = 2,
                  num_samples: int = 100000,
-                 dataset_name: Optional[Union[str, Dict[str, float]]] = None,
+                 dataset_name: Optional[Dict[str, float]] = None,
                  dataset_config: Optional[List[str]] = None,
-                 tokenizer = None,
+                 tokenizer=None,
                  cache_dir: Optional[str] = None,
                  streaming: bool = False,
                  split: str = "train",
                  seed: int = 42):
-
-        # Set defaults
-        if dataset_name is None:
-            dataset_name = {"allenai/c4": 1.0}
-        elif isinstance(dataset_name, str):
-            dataset_name = {dataset_name: 1.0}
-
-        if dataset_config is None:
-            dataset_config = ["en"]
 
         self.sequence_length = sequence_length
         self.batch_size = batch_size
@@ -44,10 +35,9 @@ class TokenDataset(IterableDataset):
         self.streaming = streaming
         self.split = split
         self.seed = seed
+        self.token_buffer = []
 
-        # Initialize tokenizer
         if tokenizer is None:
-            # Only create new tokenizer if none provided
             tokenizer_name = "google/gemma-2-9b"
             logger.info(f"Initializing tokenizer: {tokenizer_name}")
             self.tokenizer = AutoTokenizer.from_pretrained(
@@ -57,7 +47,6 @@ class TokenDataset(IterableDataset):
                 trust_remote_code=True
             )
         else:
-            # Use the passed tokenizer object
             self.tokenizer = tokenizer
             logger.info("Using provided tokenizer")
 
@@ -66,7 +55,6 @@ class TokenDataset(IterableDataset):
 
         logger.info(f"Tokenizer vocab size: {self.tokenizer.vocab_size}")
 
-        # Load datasets
         self.datasets = self._load_datasets()
 
     def _load_datasets(self):
@@ -76,73 +64,84 @@ class TokenDataset(IterableDataset):
         for dataset_name, proportion in self.dataset_name.items():
             logger.info(f"Loading dataset: {dataset_name} (proportion: {proportion})")
 
-            if dataset_name == "allenai/c4":
-                for config in self.dataset_config:
-                    logger.info(f"Loading C4 with config: {config}")
-                    try:
-                        dataset = load_dataset(
-                            dataset_name,
-                            config,
-                            split=self.split,
-                            streaming=self.streaming,
-                            cache_dir=self.datasets_cache_dir,
-                            token=os.getenv("HF_TOKEN")
-                        )
-                        datasets[f"{dataset_name}_{config}"] = {
-                            "dataset": dataset,
-                            "proportion": proportion
-                        }
-                        logger.success(f"Successfully loaded {dataset_name}_{config}")
-                    except Exception as e:
-                        logger.error(f"Failed to load {dataset_name}_{config}: {e}")
-                        # Fallback to default C4
-                        dataset = load_dataset(
-                            "allenai/c4",
-                            "en",
-                            split=self.split,
-                            streaming=self.streaming,
-                            cache_dir=self.datasets_cache_dir,
-                            token=os.getenv("HF_TOKEN")
-                        )
-                        datasets[f"c4_en"] = {
-                            "dataset": dataset,
-                            "proportion": proportion
-                        }
-            else:
+            # Handle datasets with configs
+            for config in self.dataset_config:
+                logger.info(f"Loading {dataset_name} with config: {config}")
                 try:
                     dataset = load_dataset(
                         dataset_name,
+                        config,
                         split=self.split,
                         streaming=self.streaming,
                         cache_dir=self.datasets_cache_dir,
                         token=os.getenv("HF_TOKEN")
                     )
-                    datasets[dataset_name] = {
+                    datasets[f"{dataset_name}_{config}"] = {
                         "dataset": dataset,
                         "proportion": proportion
                     }
-                    logger.success(f"Successfully loaded {dataset_name}")
+                    logger.success(f"Successfully loaded {dataset_name}_{config}")
                 except Exception as e:
-                    logger.error(f"Failed to load {dataset_name}: {e}")
+                    logger.error(f"Failed to load {dataset_name}_{config}: {e}")
 
         return datasets
 
-    def _tokenize_text(self, text: str) -> Dict[str, torch.Tensor]:
-        """Tokenize text and prepare for training"""
-        # Tokenize with truncation and padding
-        encoded = self.tokenizer(
-            text,
-            truncation=True,
-            padding="max_length",
-            max_length=self.sequence_length,
-            return_tensors="pt"
-        )
+    def _get_text_from_sample(self, sample):
+        """Extract text from sample, handling different dataset formats"""
+        if "text" in sample:
+            return sample["text"]
+        elif "content" in sample:
+            return sample["content"]
+        else:
+            return " ".join([str(v) for v in sample.values() if isinstance(v, str)])
 
-        input_ids = encoded["input_ids"].squeeze()
-        attention_mask = encoded["attention_mask"].squeeze()
+    def _tokenize_and_pack(self, dataset_iters, dataset_names, probabilities):
+        """Pack multiple documents into a single sequence"""
+        packed_tokens = []
 
+        while len(packed_tokens) < self.sequence_length:
+            try:
+                selected_dataset = np.random.choice(dataset_names, p=probabilities)
+                sample = next(dataset_iters[selected_dataset])
+
+                text = self._get_text_from_sample(sample)
+                if not text or len(text.strip()) < 10:
+                    continue
+
+                doc_tokens = self.tokenizer.encode(text, add_special_tokens=False)
+
+                if not doc_tokens:
+                    continue
+
+                if packed_tokens:
+                    packed_tokens.append(self.tokenizer.eos_token_id)
+
+                remaining_space = self.sequence_length - len(packed_tokens)
+                if remaining_space <= 0:
+                    break
+
+                tokens_to_add = min(len(doc_tokens), remaining_space)
+                packed_tokens.extend(doc_tokens[:tokens_to_add])
+
+                if tokens_to_add < len(doc_tokens):
+                    break
+
+            except StopIteration:
+                dataset_iters[selected_dataset] = iter(self.datasets[selected_dataset]["dataset"])
+                continue
+            except Exception as e:
+                logger.warning(f"Error processing sample: {e}")
+                continue
+
+        if len(packed_tokens) < self.sequence_length:
+            pad_length = self.sequence_length - len(packed_tokens)
+            packed_tokens.extend([self.tokenizer.pad_token_id] * pad_length)
+        elif len(packed_tokens) > self.sequence_length:
+            packed_tokens = packed_tokens[:self.sequence_length]
+
+        input_ids = torch.tensor(packed_tokens, dtype=torch.long)
+        attention_mask = (input_ids != self.tokenizer.pad_token_id).long()
         labels = input_ids.clone()
-
         labels[attention_mask == 0] = -100
 
         return {
@@ -174,32 +173,10 @@ class TokenDataset(IterableDataset):
         samples_yielded = 0
         while samples_yielded < self.num_samples:
             try:
-                selected_dataset = np.random.choice(dataset_names, p=probabilities)
-
-                sample = next(dataset_iters[selected_dataset])
-
-                # Extract text (handle different dataset formats)
-                if "text" in sample:
-                    text = sample["text"]
-                elif "content" in sample:
-                    text = sample["content"]
-                else:
-                    # Concatenate all string fields
-                    text = " ".join([str(v) for v in sample.values() if isinstance(v, str)])
-
-                if not text or len(text.strip()) < 10:
-                    continue
-
-                tokenized = self._tokenize_text(text)
-                yield tokenized
-
+                packed_sample = self._tokenize_and_pack(dataset_iters, dataset_names, probabilities)
+                yield packed_sample
                 samples_yielded += 1
 
-            except StopIteration:
-                dataset_iters[selected_dataset] = iter(self.datasets[selected_dataset]["dataset"])
             except Exception as e:
-                logger.warning(f"Error processing sample: {e}")
+                logger.warning(f"Error creating packed sample: {e}")
                 continue
-
-
-

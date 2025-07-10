@@ -61,15 +61,17 @@ class PEERGemmaForCausalLM(GemmaForCausalLM):
         """Replace MLP layers with independent PEER layers (following the paper)"""
         num_layers = len(self.model.layers)
 
-        logger.info(f"  Model surgery info:")
-        logger.info(f"    Total layers: {num_layers}")
-        logger.info(f"    Hidden size: {self.config.hidden_size}")
-        logger.info(f"    Intermediate size: {self.config.intermediate_size}")
-        logger.info(f"   Replacing layers: {self.replace_layers}")
+        logger.info(f"Model surgery info:")
+        logger.info(f"Total layers: {num_layers}")
+        logger.info(f"Hidden size: {self.config.hidden_size}")
+        logger.info(f"Intermediate size: {self.config.intermediate_size}")
+        logger.info(f"Replacing layers: {self.replace_layers}")
 
-        # Track parameter changes
         total_original_params = 0
         total_peer_params = 0
+        if not self.replace_layers:
+            logger.info("No layers replaced")
+            return
 
         for i in self.replace_layers:
             original_mlp = self.model.layers[i].mlp
@@ -90,11 +92,9 @@ class PEERGemmaForCausalLM(GemmaForCausalLM):
 
             logger.info(f"   Layer {i}: MLP({original_params:,}) → PEER({peer_params:,})")
 
-        logger.info(f"")
-        logger.info(f"   Surgery Summary:")
-        logger.info(f"   Original total: {total_original_params:,} parameters")
-        logger.info(f"   PEER total: {total_peer_params:,} parameters")
-        logger.info(f"   Parameter ratio: {total_peer_params / total_original_params:.2f}x")
+        logger.info(f"Original total: {total_original_params:,} parameters")
+        logger.info(f"PEER total: {total_peer_params:,} parameters")
+        logger.info(f"Parameter ratio: {total_peer_params / total_original_params:.2f}x")
         self.replaced_layer_indices = self.replace_layers
 
     @classmethod
