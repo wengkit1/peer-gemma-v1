@@ -1,9 +1,9 @@
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
 import os
 import torch
-from torch.utils.data import DataLoader, IterableDataset
-from datasets import load_dataset
-from transformers import AutoTokenizer
+from torch.utils.data import IterableDataset
+from datasets import load_dataset, get_dataset_config_info
+from transformers import AutoTokenizer, TrainerCallback
 from loguru import logger
 import random
 import numpy as np
@@ -20,11 +20,15 @@ class TokenDataset(IterableDataset):
                  cache_dir: Optional[str] = None,
                  streaming: bool = False,
                  split: str = "train",
-                 seed: int = 42):
+                 seed: int = 42,
+                 validation_split_ratio: float = 0.20,
+                 validation_offset: int = 10_000_000):  # Skip first 10M samples for validation
 
         self.sequence_length = sequence_length
         self.batch_size = batch_size
         self.num_samples = num_samples
+        self.validation_split_ratio = validation_split_ratio
+        self.validation_offset = validation_offset
 
         _scratch_dir = os.getenv("SCRATCH_DIR", os.path.expanduser("~/scratch"))
         default_cache = f"{_scratch_dir}/.cache/huggingface/hub/datasets"
@@ -68,6 +72,7 @@ class TokenDataset(IterableDataset):
             for config in self.dataset_config:
                 logger.info(f"Loading {dataset_name} with config: {config}")
                 try:
+                    # First, try to load the specified split
                     dataset = load_dataset(
                         dataset_name,
                         config,
@@ -76,6 +81,21 @@ class TokenDataset(IterableDataset):
                         cache_dir=self.datasets_cache_dir,
                         token=os.getenv("HF_TOKEN")
                     )
+
+                    # If split is "validation" but dataset doesn't have validation split,
+                    # create one from the training data
+                    if self.split == "validation":
+                        # Check if validation split exists by inspecting dataset info
+                        validation_exists = self._check_validation_split_exists(dataset_name, config)
+
+                        if validation_exists:
+                            logger.info(f"Found existing validation split for {dataset_name}_{config}")
+                        else:
+                            # Validation split doesn't exist, create from train
+                            logger.warning(
+                                f"No validation split found for {dataset_name}_{config}, creating from train split")
+                            dataset = self._create_validation_from_train(dataset_name, config)
+
                     datasets[f"{dataset_name}_{config}"] = {
                         "dataset": dataset,
                         "proportion": proportion
@@ -86,8 +106,68 @@ class TokenDataset(IterableDataset):
 
         return datasets
 
+    def _check_validation_split_exists(self, dataset_name: str, config: str) -> bool:
+        """Check if validation split exists without downloading data"""
+        try:
+
+            # Get dataset info to check available splits
+            dataset_info = get_dataset_config_info(
+                dataset_name,
+                config_name=config,
+                token=os.getenv("HF_TOKEN")
+            )
+
+            # Check if 'validation' is in available splits
+            available_splits = list(dataset_info.splits.keys())
+            logger.info(f"Available splits for {dataset_name}/{config}: {available_splits}")
+
+            return "validation" in available_splits
+
+        except Exception as e:
+            logger.warning(f"Could not check splits for {dataset_name}/{config}: {e}")
+            return False
+
+    def _create_validation_from_train(self, dataset_name: str, config: str):
+        """Create validation split from training data using offset approach"""
+        logger.info(f"Creating validation split from train data for {dataset_name}_{config}")
+
+        # Load training dataset as streaming
+        train_dataset = load_dataset(
+            dataset_name,
+            config,
+            split="train",
+            streaming=True,
+            cache_dir=self.datasets_cache_dir,
+            token=os.getenv("HF_TOKEN")
+        )
+
+        validation_offset = self.validation_offset
+        val_samples_target = int(self.num_samples * self.validation_split_ratio)
+
+        logger.info(f"Creating validation split: offset={validation_offset}, target_samples={val_samples_target}")
+
+        def validation_iterator():
+            sample_count = 0
+            for i, sample in enumerate(train_dataset):
+                if i < validation_offset:
+                    continue
+
+                yield sample
+                sample_count += 1
+                if sample_count >= val_samples_target:
+                    break
+
+        class ValidationDataset:
+            def __init__(self, iterator_func):
+                self.iterator_func = iterator_func
+
+            def __iter__(self):
+                return self.iterator_func()
+
+        return ValidationDataset(validation_iterator)
+
     def _get_text_from_sample(self, sample):
-        """Extract text from sample, handling different dataset formats"""
+        """Extract text from sample, handling different data formats"""
         if "text" in sample:
             return sample["text"]
         elif "content" in sample:
@@ -180,3 +260,44 @@ class TokenDataset(IterableDataset):
             except Exception as e:
                 logger.warning(f"Error creating packed sample: {e}")
                 continue
+
+
+class DynamicEvalDataset:
+    """A wrapper that provides different subsets of eval data for each evaluation"""
+
+    def __init__(self, base_dataset, eval_samples_per_call: int = 1000, seed: int = 42):
+        self.base_dataset = base_dataset
+        self.eval_samples_per_call = eval_samples_per_call
+        self.seed = seed
+        self.call_count = 0
+
+    def __iter__(self):
+        """Each call returns a different subset of the evaluation data"""
+        current_seed = self.seed + self.call_count
+        self.call_count += 1
+
+        random.seed(current_seed)
+        np.random.seed(current_seed)
+
+        logger.info(f"Generating eval subset {self.call_count} with seed {current_seed}")
+
+        base_iter = iter(self.base_dataset)
+
+        for i, sample in enumerate(base_iter):
+            if i >= self.eval_samples_per_call:
+                break
+            yield sample
+
+
+class DynamicEvalCallback(TrainerCallback):
+    """Callback that refreshes the eval dataset for each evaluation"""
+
+    def __init__(self, dynamic_eval_dataset):
+        self.dynamic_eval_dataset = dynamic_eval_dataset
+
+    def on_evaluate(self, args, state, control, model=None, **kwargs):
+        """Called before each evaluation - refresh the eval dataset"""
+        if hasattr(state, 'trainer') and hasattr(state.trainer, 'eval_dataset'):
+            state.trainer.eval_dataset = self.dynamic_eval_dataset
+            logger.info(f"Refreshed eval dataset for evaluation step {state.global_step}")
+

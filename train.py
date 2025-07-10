@@ -23,7 +23,7 @@ from dotenv import load_dotenv
 
 from configs.config_schema import DataConfig, Config
 from models.peer_gemma import PEERGemmaForCausalLM
-from data.data_module import TokenDataset
+from data.data_module import TokenDataset, DynamicEvalDataset, DynamicEvalCallback
 from trainers import GradualUnfreezingCallback
 
 load_dotenv()
@@ -170,9 +170,11 @@ def setup_model_and_tokenizer(cfg: Config):
     return model, tokenizer, config
 
 
-def create_dataset(data_config: DataConfig, tokenizer, split="train"):
-    """Create dataset for training/validation"""
-    return TokenDataset(
+def create_dataset(data_config: DataConfig, tokenizer, split="train",
+                   validation_offset: int = 10_000_000, validation_split_ratio: int = 0.20, samples: int = 100):
+    """Create dataset for training/validation with enhanced validation handling"""
+
+    base_dataset = TokenDataset(
         sequence_length=data_config.sequence_length,
         batch_size=data_config.batch_size,
         num_samples=data_config.num_samples,
@@ -182,8 +184,20 @@ def create_dataset(data_config: DataConfig, tokenizer, split="train"):
         cache_dir=data_config.cache_dir or os.getenv('HF_DATASETS_CACHE'),
         streaming=data_config.streaming,
         split=split,
-        seed=data_config.seed
+        seed=data_config.seed,
+        validation_offset=validation_offset,
+        validation_split_ratio=validation_split_ratio
     )
+
+    if split == "validation":
+        eval_samples_per_call = samples
+        return DynamicEvalDataset(
+            base_dataset,
+            eval_samples_per_call=eval_samples_per_call,
+            seed=data_config.seed
+        )
+
+    return base_dataset
 
 
 def setup_training_args(cfg: Config, output_dir: str, logging_dir: str):
@@ -342,15 +356,15 @@ def train_task(model, data, training, system, deepspeed_config, output_dir, logg
 
     effective_gbs = int(os.environ.get('EFFECTIVE_GBS',
                                      cfg.data.batch_size * cfg.system.devices * cfg.training.accumulate_grad_batches))
-    eval_data_config.num_samples = effective_gbs * 20
-    eval_dataset = create_dataset(eval_data_config, tokenizer)
+    num_samples = effective_gbs * 20
+    eval_dataset = create_dataset(eval_data_config, tokenizer,
+                                  split="validation", validation_offset=100_000_000, samples=num_samples)
 
     # Data collator
     data_collator = DataCollatorForLanguageModeling(
         tokenizer=tokenizer,
         mlm=False,
     )
-
 
     # unfreezing schedule
     # callback = create_unfreezing_callback(model)
@@ -363,6 +377,8 @@ def train_task(model, data, training, system, deepspeed_config, output_dir, logg
         data_collator=data_collator,
         processing_class=tokenizer,
     )
+    dynamic_callback = DynamicEvalCallback(eval_dataset)
+    trainer.add_callback(dynamic_callback)
 
     # trainer.add_callback(callback)
     if not cfg.debug:
