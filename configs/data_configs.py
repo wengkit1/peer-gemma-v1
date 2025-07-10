@@ -13,7 +13,7 @@ c4_data = DataConfig(
 )
 
 c4_large_data = DataConfig(
-    sequence_length=4096,
+    sequence_length=8192,
     batch_size=1,
     num_samples=1000000,
     dataset_name={"allenai/c4": 1.0},

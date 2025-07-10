@@ -76,9 +76,7 @@ class TokenDataset(IterableDataset):
         for dataset_name, proportion in self.dataset_name.items():
             logger.info(f"Loading dataset: {dataset_name} (proportion: {proportion})")
 
-            # Handle different dataset configurations
             if dataset_name == "allenai/c4":
-                # C4 dataset with language config
                 for config in self.dataset_config:
                     logger.info(f"Loading C4 with config: {config}")
                     try:
@@ -111,7 +109,6 @@ class TokenDataset(IterableDataset):
                             "proportion": proportion
                         }
             else:
-                # Other datasets
                 try:
                     dataset = load_dataset(
                         dataset_name,
@@ -156,7 +153,6 @@ class TokenDataset(IterableDataset):
 
     def __iter__(self):
         """Iterator for the dataset"""
-        # Set random seed for reproducibility
         random.seed(self.seed)
         np.random.seed(self.seed)
 
@@ -178,10 +174,8 @@ class TokenDataset(IterableDataset):
         samples_yielded = 0
         while samples_yielded < self.num_samples:
             try:
-                # Sample a dataset according to proportions
                 selected_dataset = np.random.choice(dataset_names, p=probabilities)
 
-                # Get next sample from selected dataset
                 sample = next(dataset_iters[selected_dataset])
 
                 # Extract text (handle different dataset formats)
@@ -202,7 +196,6 @@ class TokenDataset(IterableDataset):
                 samples_yielded += 1
 
             except StopIteration:
-                # If a dataset iterator is exhausted, recreate it
                 dataset_iters[selected_dataset] = iter(self.datasets[selected_dataset]["dataset"])
             except Exception as e:
                 logger.warning(f"Error processing sample: {e}")
