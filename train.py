@@ -245,7 +245,7 @@ def setup_training_args(cfg: Config, output_dir: str, logging_dir: str):
         # Logging
         logging_steps=10,
         logging_first_step=True,
-        eval_steps=500,
+        eval_steps=cfg.training.val_check_interval,
         save_steps=500,
         run_name=run_name,
         save_total_limit=cfg.training.save_top_k,
