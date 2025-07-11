@@ -61,6 +61,12 @@ class TokenDataset(IterableDataset):
 
         self.datasets = self._load_datasets()
 
+
+    def __len__(self):
+        """Return the number of packed samples"""
+        return self.num_samples
+
+
     def _load_datasets(self):
         """Load and combine multiple datasets according to proportions"""
         datasets = {}
@@ -106,7 +112,9 @@ class TokenDataset(IterableDataset):
 
         return datasets
 
-    def _check_validation_split_exists(self, dataset_name: str, config: str) -> bool:
+
+    @staticmethod
+    def _check_validation_split_exists(dataset_name: str, config: str) -> bool:
         """Check if validation split exists without downloading data"""
         try:
 
@@ -166,7 +174,8 @@ class TokenDataset(IterableDataset):
 
         return ValidationDataset(validation_iterator)
 
-    def _get_text_from_sample(self, sample):
+    @staticmethod
+    def _get_text_from_sample(sample):
         """Extract text from sample, handling different data formats"""
         if "text" in sample:
             return sample["text"]
@@ -270,6 +279,12 @@ class DynamicEvalDataset:
         self.eval_samples_per_call = eval_samples_per_call
         self.seed = seed
         self.call_count = 0
+
+
+    def __len__(self):
+        """Return the number of samples per evaluation call"""
+        return self.eval_samples_per_call
+
 
     def __iter__(self):
         """Each call returns a different subset of the evaluation data"""
