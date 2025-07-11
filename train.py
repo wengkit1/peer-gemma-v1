@@ -171,7 +171,7 @@ def setup_model_and_tokenizer(cfg: Config):
 
 
 def create_dataset(data_config: DataConfig, tokenizer, split="train",
-                   validation_offset: int = 10_000_000, validation_split_ratio: int = 0.20, samples: int = 100):
+                   validation_offset: int = 10_000_000, validation_split_ratio: int = 0.20, eval_samples_per_call: int = 100):
     """Create dataset for training/validation with enhanced validation handling"""
 
     base_dataset = TokenDataset(
@@ -190,7 +190,7 @@ def create_dataset(data_config: DataConfig, tokenizer, split="train",
     )
 
     if split == "validation":
-        eval_samples_per_call = samples
+        eval_samples_per_call = eval_samples_per_call
         return DynamicEvalDataset(
             base_dataset,
             eval_samples_per_call=eval_samples_per_call,
@@ -358,7 +358,7 @@ def train_task(model, data, training, system, deepspeed_config, output_dir, logg
                                      cfg.data.batch_size * cfg.system.devices * cfg.training.accumulate_grad_batches))
     num_samples = effective_gbs * 20
     eval_dataset = create_dataset(eval_data_config, tokenizer,
-                                  split="validation", validation_offset=100_000_000, samples=num_samples)
+                                  split="validation", validation_offset=100_000_000, eval_samples_per_call=num_samples)
 
     # Data collator
     data_collator = DataCollatorForLanguageModeling(
