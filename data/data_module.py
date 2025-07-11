@@ -271,7 +271,7 @@ class TokenDataset(IterableDataset):
                 continue
 
 
-class DynamicEvalDataset:
+class DynamicEvalDataset(IterableDataset):
     """A wrapper that provides different subsets of eval data for each evaluation"""
 
     def __init__(self, base_dataset, eval_samples_per_call: int = 1000, seed: int = 42):
