@@ -22,7 +22,7 @@ class TokenDataset(IterableDataset):
                  split: str = "train",
                  seed: int = 42,
                  validation_split_ratio: float = 0.20,
-                 validation_offset: int = 10_000_000):  # Skip first 10M samples for validation
+                 validation_offset: int = 10_000_000):
 
         self.sequence_length = sequence_length
         self.batch_size = batch_size
@@ -149,30 +149,14 @@ class TokenDataset(IterableDataset):
             token=os.getenv("HF_TOKEN")
         )
 
-        validation_offset = self.validation_offset
+        validation_dataset = train_dataset.skip(self.validation_offset)
+
+        # Take only the number of samples you need for validation
         val_samples_target = int(self.num_samples * self.validation_split_ratio)
+        validation_dataset = validation_dataset.take(val_samples_target)
 
-        logger.info(f"Creating validation split: offset={validation_offset}, target_samples={val_samples_target}")
+        return validation_dataset
 
-        def validation_iterator():
-            sample_count = 0
-            for i, sample in enumerate(train_dataset):
-                if i < validation_offset:
-                    continue
-
-                yield sample
-                sample_count += 1
-                if sample_count >= val_samples_target:
-                    break
-
-        class ValidationDataset:
-            def __init__(self, iterator_func):
-                self.iterator_func = iterator_func
-
-            def __iter__(self):
-                return self.iterator_func()
-
-        return ValidationDataset(validation_iterator)
 
     @staticmethod
     def _get_text_from_sample(sample):

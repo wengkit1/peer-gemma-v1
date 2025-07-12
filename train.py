@@ -358,7 +358,7 @@ def train_task(model, data, training, system, deepspeed_config, output_dir, logg
                                      cfg.data.batch_size * cfg.system.devices * cfg.training.accumulate_grad_batches))
     num_samples = effective_gbs * 20
     eval_dataset = create_dataset(eval_data_config, tokenizer,
-                                  split="validation", validation_offset=50_000_000, eval_samples_per_call=num_samples)
+                                  split="validation", validation_offset=100_000_000, eval_samples_per_call=num_samples)
 
     # Data collator
     data_collator = DataCollatorForLanguageModeling(
